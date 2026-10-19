@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f4e9">
+  <title>Dinossauro em Fuga</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background: #f7f4e9;
+      color: #23352c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 32px 18px;
+      background:
+        radial-gradient(ellipse at 50% 0%, #fffdf5 0, transparent 56%),
+        #f7f4e9;
+    }
+
+    .game {
+      width: min(900px, 100%);
+    }
+
+    .topline {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 0 4px 16px;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: #718273;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 5vw, 38px);
+      letter-spacing: -.045em;
+      line-height: 1;
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: clamp(12px, 4vw, 30px);
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .scoreboard span {
+      display: block;
+      margin-top: 4px;
+      color: #d76b43;
+      font-size: 20px;
+    }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #263a30;
+      border-radius: 12px;
+      background: #cce9df;
+      box-shadow: 0 8px 0 #d9d5c8, 0 18px 35px #354a3d18;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+    }
+
+    .shade {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: #e8f3e9a8;
+      text-align: center;
+    }
+
+    .shade[hidden] { display: none; }
+
+    .card {
+      width: min(350px, 100%);
+      padding: 25px 28px 22px;
+      border: 2px solid #263a30;
+      border-radius: 10px;
+      background: #fffdf2;
+      box-shadow: 5px 5px 0 #263a30;
+    }
+
+    .card .emoji {
+      margin: 0 0 7px;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      letter-spacing: -.03em;
+    }
+
+    .card p {
+      margin: 0 0 18px;
+      color: #647267;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button {
+      border: 2px solid #263a30;
+      border-radius: 7px;
+      background: #d9f06b;
+      color: #23352c;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform .12s, background .12s;
+    }
+
+    button:hover { background: #e7ff86; transform: translateY(-1px); }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 3px solid #d76b43; outline-offset: 3px; }
+
+    .start-button {
+      min-width: 158px;
+      padding: 11px 18px;
+      box-shadow: 3px 3px 0 #263a30;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 22px 4px 0;
+    }
+
+    .hint {
+      margin: 0;
+      color: #647267;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 27px;
+      padding: 2px 6px;
+      border: 1px solid #c9cdbf;
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      background: #fffdf2;
+      color: #33483a;
+      font: 700 11px ui-monospace, Consolas, monospace;
+      text-align: center;
+    }
+
+    .touch-controls { display: flex; gap: 9px; }
+
+    .touch-controls button {
+      min-width: 92px;
+      padding: 10px 13px;
+      font-size: 12px;
+    }
+
+    .touch-controls button:last-child { background: #ffd5a4; }
+
+    @media (max-width: 560px) {
+      body { padding: 24px 12px; }
+      .topline { align-items: center; }
+      .scoreboard { gap: 12px; font-size: 10px; }
+      .scoreboard span { font-size: 16px; }
+      .controls { align-items: stretch; flex-direction: column; margin-top: 18px; }
+      .hint { text-align: center; }
+      .touch-controls { justify-content: center; }
+      .touch-controls button { flex: 1; max-width: 170px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <header class="topline">
+      <div>
+        <p class="eyebrow">Uma aventura pré-histórica</p>
+        <h1>Dinossauro em Fuga</h1>
+      </div>
+      <div class="scoreboard" aria-label="Pontuação">
+        <div>Pontos<span id="score">00000</span></div>
+        <div>Recorde<span id="best">00000</span></div>
+      </div>
+    </header>
+
+    <section class="stage" aria-label="Jogo do dinossauro">
+      <canvas id="game" width="900" height="320" aria-label="Desvie dos cactos e dos pterossauros"></canvas>
+      <div class="shade" id="shade">
+        <div class="card">
+          <p class="emoji" aria-hidden="true">🦖</p>
+          <h2 id="message-title">Pronto para correr?</h2>
+          <p id="message-copy">Pule os cactos e se abaixe para passar por baixo dos pterossauros.</p>
+          <button class="start-button" id="start-button" type="button">Começar a correr</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="controls">
+      <p class="hint"><kbd>ESPAÇO</kbd> ou <kbd>↑</kbd> pular &nbsp; <kbd>↓</kbd> agachar</p>
+      <div class="touch-controls">
+        <button id="jump-button" type="button" aria-label="Pular">↑ PULAR</button>
+        <button id="duck-button" type="button" aria-label="Agachar">↓ AGACHAR</button>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const shade = document.getElementById("shade");
+      const title = document.getElementById("message-title");
+      const copy = document.getElementById("message-copy");
+      const startButton = document.getElementById("start-button");
+      const scoreLabel = document.getElementById("score");
+      const bestLabel = document.getElementById("best");
+      const groundY = 263;
+      const player = { x: 105, y: groundY - 48, width: 48, height: 48, velocityY: 0, ducking: false };
+      const clouds = [
+        { x: 95, y: 72, width: 64 },
+        { x: 390, y: 112, width: 48 },
+        { x: 685, y: 66, width: 72 }
+      ];
+      let obstacles = [];
+      let particles = [];
+      let state = "ready";
+      let score = 0;
+      let best = Number(localStorage.getItem("dino-run-best") || 0);
+      let speed = 330;
+      let spawnTimer = 1.15;
+      let worldOffset = 0;
+      let lastTime = 0;
+      let duckPressed = false;
+
+      bestLabel.textContent = formatScore(best);
+
+      function formatScore(value) {
+        return String(Math.floor(value)).padStart(5, "0");
+      }
+
+      function startGame() {
+        score = 0;
+        speed = 330;
+        spawnTimer = 1;
+        obstacles = [];
+        particles = [];
+        player.y = groundY - 48;
+        player.velocityY = 0;
+        player.ducking = false;
+        duckPressed = false;
+        state = "running";
+        shade.hidden = true;
+        lastTime = performance.now();
+      }
+
+      function endGame() {
+        state = "over";
+        if (score > best) {
+          best = Math.floor(score);
+          localStorage.setItem("dino-run-best", String(best));
+          bestLabel.textContent = formatScore(best);
+        }
+        title.textContent = "Fim de jogo!";
+        copy.textContent = `Você fez ${formatScore(score)} pontos. Mais uma corrida?`;
+        startButton.textContent = "Tentar de novo";
+        shade.hidden = false;
+      }
+
+      function jump() {
+        if (state === "ready" || state === "over") {
+          startGame();
+          return;
+        }
+        if (state === "running" && player.y >= groundY - player.height - 1 && !player.ducking) {
+          player.velocityY = -690;
+          for (let i = 0; i < 5; i++) {
+            particles.push({ x: player.x + 12 + Math.random() * 22, y: groundY - 2, vx: -35 - Math.random() * 45, vy: -20 - Math.random() * 45, life: .35 });
+          }
+        }
+      }
+
+      function setDucking(value) {
+        duckPressed = value;
+      }
+
+      function spawnObstacle() {
+        const flying = score > 90 && Math.random() < .34;
+        if (flying) {
+          obstacles.push({ type: "bird", x: canvas.width + 20, y: groundY - 73, width: 48, height: 25, phase: Math.random() * 6 });
+        } else {
+          const tall = Math.random() < .38;
+          obstacles.push({ type: "cactus", x: canvas.width + 20, y: groundY - (tall ? 53 : 38), width: tall ? 27 : 22, height: tall ? 53 : 38, tall });
+        }
+        spawnTimer = Math.max(.72, 1.35 + Math.random() * .75 - (speed - 330) / 800);
+      }
+
+      function update(delta) {
+        if (state !== "running") return;
+        score += delta * 10;
+        speed = Math.min(620, 330 + score * 1.15);
+        worldOffset = (worldOffset + speed * delta) % 48;
+        scoreLabel.textContent = formatScore(score);
+        player.ducking = duckPressed && player.y >= groundY - player.height - 1;
+        const height = player.ducking ? 28 : 48;
+        if (player.y < groundY - height || player.velocityY < 0) {
+          player.velocityY += 1900 * delta;
+          player.y += player.velocityY * delta;
+          if (player.y > groundY - height) {
+            player.y = groundY - height;
+            player.velocityY = 0;
+          }
+        } else {
+          player.y = groundY - height;
+        }
+
+        spawnTimer -= delta;
+        if (spawnTimer <= 0) spawnObstacle();
+        for (const obstacle of obstacles) obstacle.x -= speed * delta;
+        obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > -10);
+
+        for (const cloud of clouds) {
+          cloud.x -= speed * delta * .12;
+          if (cloud.x + cloud.width < 0) cloud.x = canvas.width + Math.random() * 140;
+        }
+        for (const particle of particles) {
+          particle.x += particle.vx * delta;
+          particle.y += particle.vy * delta;
+          particle.vy += 100 * delta;
+          particle.life -= delta;
+        }
+        particles = particles.filter(particle => particle.life > 0);
+
+        const dinoBox = { x: player.x + 8, y: player.y + 7, width: player.width - 15, height: height - 10 };
+        for (const obstacle of obstacles) {
+          const box = obstacle.type === "bird"
+            ? { x: obstacle.x + 5, y: obstacle.y + 5, width: obstacle.width - 10, height: obstacle.height - 8 }
+            : { x: obstacle.x + 4, y: obstacle.y + 4, width: obstacle.width - 8, height: obstacle.height - 4 };
+          if (dinoBox.x < box.x + box.width && dinoBox.x + dinoBox.width > box.x && dinoBox.y < box.y + box.height && dinoBox.y + dinoBox.height > box.y) {
+            endGame();
+            break;
+          }
+        }
+      }
+
+      function drawCloud(x, y, width) {
+        ctx.fillStyle = "#f8fff0";
+        ctx.fillRect(x + 12, y + 8, width - 20, 12);
+        ctx.fillRect(x + 22, y, width - 38, 12);
+        ctx.fillRect(x, y + 12, width, 9);
+      }
+
+      function drawDinosaur() {
+        const ducking = player.ducking;
+        const x = player.x;
+        const y = player.y;
+        const bodyY = ducking ? y + 8 : y + 18;
+        const bodyH = ducking ? 20 : 23;
+        const green = "#477b52";
+        ctx.fillStyle = green;
+        ctx.fillRect(x + 9, bodyY + 3, 27, bodyH - 3);
+        ctx.fillRect(x + 28, bodyY - 8, 18, 17);
+        ctx.fillRect(x + 39, bodyY - 4, 13, 11);
+        ctx.fillRect(x + 3, bodyY + 9, 11, 7);
+        ctx.fillRect(x - 2, bodyY + 12, 9, 4);
+        ctx.fillStyle = "#315f42";
+        ctx.fillRect(x + 15, bodyY - 3, 6, 5);
+        ctx.fillRect(x + 24, bodyY - 3, 6, 5);
+        ctx.fillStyle = "#f7f4e9";
+        ctx.fillRect(x + 39, bodyY - 3, 4, 4);
+        ctx.fillStyle = "#23352c";
+        ctx.fillRect(x + 41, bodyY - 2, 2, 2);
+        ctx.fillStyle = "#315f42";
+        ctx.fillRect(x + 34, bodyY + 4, 4, 3);
+        ctx.fillStyle = green;
+        if (!ducking && y < groundY - 48) {
+          ctx.fillRect(x + 14, bodyY + bodyH, 8, 7);
+          ctx.fillRect(x + 29, bodyY + bodyH + 2, 8, 5);
+        } else {
+          const step = state === "running" ? Math.floor(performance.now() / 95) % 2 : 0;
+          ctx.fillRect(x + 14, bodyY + bodyH, 8, 8 - step * 4);
+          ctx.fillRect(x + 29, bodyY + bodyH, 8, 4 + step * 4);
+        }
+      }
+
+      function drawCactus(obstacle) {
+        const { x, y, width, height } = obstacle;
+        ctx.fillStyle = "#347b57";
+        ctx.fillRect(x + width * .35, y, width * .42, height);
+        ctx.fillRect(x, y + height * .42, width * .34, 7);
+        ctx.fillRect(x, y + height * .28, 7, height * .17);
+        ctx.fillRect(x + width * .7, y + height * .31, width * .3, 7);
+        ctx.fillRect(x + width * .7, y + height * .16, 7, height * .17);
+        ctx.fillStyle = "#70a66f";
+        ctx.fillRect(x + width * .44, y + 5, 3, height - 10);
+      }
+
+      function drawBird(obstacle) {
+        const flap = Math.sin(performance.now() / 95 + obstacle.phase) > 0;
+        ctx.fillStyle = "#d76b43";
+        ctx.fillRect(obstacle.x + 12, obstacle.y + 9, 25, 10);
+        ctx.fillRect(obstacle.x + 33, obstacle.y + 5, 12, 9);
+        ctx.fillRect(obstacle.x + 43, obstacle.y + 9, 7, 4);
+        ctx.fillRect(obstacle.x + 7, obstacle.y + 12, 8, 5);
+        ctx.fillStyle = "#b84e37";
+        if (flap) {
+          ctx.fillRect(obstacle.x + 14, obstacle.y, 7, 10);
+          ctx.fillRect(obstacle.x + 20, obstacle.y + 3, 12, 7);
+        } else {
+          ctx.fillRect(obstacle.x + 14, obstacle.y + 16, 7, 8);
+          ctx.fillRect(obstacle.x + 20, obstacle.y + 14, 12, 7);
+        }
+        ctx.fillStyle = "#fff7e8";
+        ctx.fillRect(obstacle.x + 39, obstacle.y + 7, 3, 3);
+        ctx.fillStyle = "#23352c";
+        ctx.fillRect(obstacle.x + 40, obstacle.y + 8, 2, 2);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        sky.addColorStop(0, "#cce9df");
+        sky.addColorStop(1, "#e9f0d7");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#b6d8bc";
+        ctx.beginPath();
+        ctx.moveTo(0, 223);
+        ctx.lineTo(0, 190);
+        ctx.lineTo(150, 152);
+        ctx.lineTo(310, 213);
+        ctx.lineTo(490, 169);
+        ctx.lineTo(675, 218);
+        ctx.lineTo(820, 158);
+        ctx.lineTo(900, 184);
+        ctx.lineTo(900, 263);
+        ctx.closePath();
+        ctx.fill();
+
+        for (const cloud of clouds) drawCloud(cloud.x, cloud.y, cloud.width);
+
+        ctx.fillStyle = "#d4b67e";
+        ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+        ctx.fillStyle = "#54764e";
+        ctx.fillRect(0, groundY, canvas.width, 4);
+        ctx.fillStyle = "#ad8f61";
+        for (let x = -worldOffset; x < canvas.width; x += 48) {
+          ctx.fillRect(x, groundY + 17, 20, 3);
+          ctx.fillRect(x + 25, groundY + 36, 8, 3);
+        }
+
+        for (const particle of particles) {
+          ctx.globalAlpha = Math.max(0, particle.life / .35);
+          ctx.fillStyle = "#f7f4e9";
+          ctx.fillRect(particle.x, particle.y, 4, 4);
+        }
+        ctx.globalAlpha = 1;
+
+        for (const obstacle of obstacles) {
+          if (obstacle.type === "bird") drawBird(obstacle);
+          else drawCactus(obstacle);
+        }
+        drawDinosaur();
+
+        if (state === "ready") {
+          ctx.fillStyle = "#477b5280";
+          ctx.font = "bold 13px Trebuchet MS, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("A FLORESTA ESTÁ CALMA... POR ENQUANTO", canvas.width / 2, 294);
+        }
+      }
+
+      function frame(time) {
+        const delta = Math.min((time - lastTime) / 1000, .04);
+        lastTime = time;
+        update(delta);
+        draw();
+        requestAnimationFrame(frame);
+      }
+
+      startButton.addEventListener("click", startGame);
+      document.getElementById("jump-button").addEventListener("pointerdown", event => {
+        event.preventDefault();
+        jump();
+      });
+      const duckButton = document.getElementById("duck-button");
+      duckButton.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        duckButton.setPointerCapture(event.pointerId);
+        setDucking(true);
+      });
+      for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
+        duckButton.addEventListener(eventName, () => setDucking(false));
+      }
+      window.addEventListener("keydown", event => {
+        if (["Space", "ArrowUp", "ArrowDown"].includes(event.code)) event.preventDefault();
+        if (event.code === "Space" || event.code === "ArrowUp") {
+          if (!event.repeat) jump();
+        } else if (event.code === "ArrowDown") {
+          setDucking(true);
+        }
+      });
+      window.addEventListener("keyup", event => {
+        if (event.code === "ArrowDown") setDucking(false);
+      });
+      window.addEventListener("blur", () => setDucking(false));
+
+      draw();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
